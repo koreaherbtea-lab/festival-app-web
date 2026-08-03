@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>전국 지역 축제 앱</title>
+  
+  <!-- 핵심: 비밀 키가 담긴 env.js 파일을 여기서 몰래 불러옵니다 -->
+  <script src="env.js"></script>
+</head>
+<body>
+  <h1>전국 지역 축제 게시판</h1>
+  <!-- (이곳에 기존에 드렸던 지도, 게시판, 로그인 HTML 코드가 들어갑니다) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    
+    // 코드에 키를 직접 적지 않고, window.ENV에 숨겨둔 키를 가져다 씁니다!
+    const firebaseConfig = window.ENV;
+    
+    // 파이어베이스 시작
+    const app = initializeApp(firebaseConfig);
+    
+    // (이후 게시판 글쓰기, 로그인 로직 등 기존 코드 동일하게 작성)
+  </script>
+</body>
+</html>
