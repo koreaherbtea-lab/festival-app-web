@@ -204,7 +204,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     // 🚨 [여기에 본인의 Firebase Config를 꼭 넣으세요] 🚨
@@ -241,10 +241,20 @@
     }
 
     // 공통: 로그인 관리
+    // 🔒 signInWithPopup 대신 signInWithRedirect 사용
+    // (서드파티 쿠키 차단 브라우저에서도 안정적으로 동작)
     document.getElementById('login-btn').addEventListener('click', () => {
-      signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert("로그인 실패"));
+      signInWithRedirect(auth, new GoogleAuthProvider());
     });
     document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+    // 구글 로그인 페이지에서 돌아온 직후, 리다이렉트 결과를 처리
+    // (성공/실패 여부와 상관없이 onAuthStateChanged가 최종 로그인 상태를 알려주지만,
+    //  여기서는 명시적인 에러 메시지를 보여주기 위해 별도로 처리합니다)
+    getRedirectResult(auth).catch((e) => {
+      console.error("로그인 리다이렉트 오류:", e);
+      alert("로그인 실패: " + (e.code || e.message));
+    });
 
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
