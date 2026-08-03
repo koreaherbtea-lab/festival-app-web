@@ -2,24 +2,494 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>전국 지역 축제 앱</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전국 지역 축제 & 커뮤니티</title>
   
-  <!-- 핵심: 비밀 키가 담긴 env.js 파일을 여기서 몰래 불러옵니다 -->
-  <script src="env.js"></script>
+  <!-- 지도 디자인(Leaflet) 불러오기 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; flex-direction: column; background-color: #f8f9fa; }
+    header { background-color: #ff6b6b; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    
+    /* 상단 네비게이션 탭 */
+    .nav-tabs { display: flex; gap: 10px; }
+    .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .nav-btn.active, .nav-btn:hover { background: white; color: #ff6b6b; }
+
+    /* 기본 버튼 & 유틸 */
+    .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .btn-login { background-color: white; color: #ff6b6b; }
+    .btn-primary { background-color: #ff6b6b; color: white; }
+    .btn-secondary { background-color: #888; color: white; }
+    .hidden { display: none !important; }
+
+    /* 뷰 컨테이너 (지도 vs 게시판) */
+    .view-container { display: flex; flex: 1; overflow: hidden; width: 100%; }
+    
+    /* === 지도 화면 CSS === */
+    #month-bar { background-color: #ffffff; padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 2px solid #eee; white-space: nowrap; }
+    #month-bar::-webkit-scrollbar { height: 6px; }
+    #month-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    .month-btn { padding: 8px 16px; border: 1px solid #ff6b6b; background: white; color: #ff6b6b; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; flex-shrink: 0; }
+    .month-btn:hover, .month-btn.active { background: #ff6b6b; color: white; }
+    
+    #map-wrapper { display: flex; flex: 1; width: 100%; }
+    #map { flex: 2; height: 100%; }
+    #info-panel { flex: 1; padding: 20px; background-color: #f8f9fa; border-left: 2px solid #ddd; overflow-y: auto; }
+    
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
+    .badge-food { background-color: #ff9f43; }
+    .badge-tour { background-color: #54a0ff; }
+    
+    .festival-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
+    .health-card { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
+    .health-card h4 { margin: 0 0 6px 0; color: #166534; font-size: 14px; }
+    .health-card p { margin: 0; color: #15803d; font-size: 13px; line-height: 1.5; }
+    .festival-link { color: #ff6b6b; text-decoration: none; font-size: 22px; font-weight: bold; }
+    .festival-link:hover { text-decoration: underline; }
+    
+    /* 축제 후기 영역 CSS */
+    .f-review-section { margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px; }
+    .f-review-list { max-height: 150px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; border-radius: 5px; padding: 10px; font-size: 13px; margin-bottom: 10px; }
+    .f-review-item { border-bottom: 1px dashed #ddd; padding-bottom: 8px; margin-bottom: 8px; }
+    .f-review-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .f-review-input-box { display: flex; gap: 5px; }
+    .f-review-input-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+    .btn-like { background-color: #4ecdc4; color: white; width: 100%; margin-top: 15px; }
+
+    /* === 게시판 화면 CSS === */
+    #board-wrapper { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+    .board-content { width: 100%; max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    
+    .post-item { border-bottom: 1px solid #eee; padding: 15px 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+    .post-item:hover { background-color: #f8f9fa; }
+    .post-title { font-size: 16px; font-weight: bold; color: #333; margin: 0; }
+    .post-meta { font-size: 12px; color: #888; margin-top: 5px; }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
+    .form-group textarea { height: 200px; resize: vertical; }
+
+    #post-read-title { margin-top: 0; font-size: 24px; }
+    #post-read-meta { color: #888; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+    #post-read-body { font-size: 15px; line-height: 1.6; min-height: 150px; white-space: pre-wrap; }
+    
+    .comment-section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
+    .comment-item { background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; }
+    .comment-meta { font-weight: bold; font-size: 12px; margin-bottom: 5px; color: #555; }
+    .comment-input-box { display: flex; gap: 10px; margin-top: 20px; }
+    .comment-input-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+  </style>
 </head>
 <body>
-  <h1>전국 지역 축제 게시판</h1>
-  <!-- (이곳에 기존에 드렸던 지도, 게시판, 로그인 HTML 코드가 들어갑니다) -->
+
+  <!-- 상단 헤더 -->
+  <header>
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <h2 style="margin: 0;">🗺️ 전국 지역 축제</h2>
+      <div class="nav-tabs">
+        <button id="tab-map" class="nav-btn active">지도 보기</button>
+        <button id="tab-board" class="nav-btn">자유 게시판</button>
+      </div>
+    </div>
+    <div>
+      <span id="user-name" style="margin-right: 15px;">로그인해주세요</span>
+      <button id="login-btn" class="btn btn-login">구글 로그인</button>
+      <button id="logout-btn" class="btn btn-login hidden">로그아웃</button>
+    </div>
+  </header>
+
+  <!-- ==================== 1. 지도 화면 ==================== -->
+  <div id="view-map" class="view-container" style="flex-direction: column;">
+    <div id="month-bar">
+      <button class="month-btn active" data-month="all">전체보기</button>
+      <button class="month-btn" data-month="1">1월</button>
+      <button class="month-btn" data-month="2">2월</button>
+      <button class="month-btn" data-month="3">3월</button>
+      <button class="month-btn" data-month="4">4월</button>
+      <button class="month-btn" data-month="5">5월</button>
+      <button class="month-btn" data-month="6">6월</button>
+      <button class="month-btn" data-month="7">7월</button>
+      <button class="month-btn" data-month="8">8월</button>
+      <button class="month-btn" data-month="9">9월</button>
+      <button class="month-btn" data-month="10">10월</button>
+      <button class="month-btn" data-month="11">11월</button>
+      <button class="month-btn" data-month="12">12월</button>
+    </div>
+
+    <div id="map-wrapper">
+      <div id="map"></div>
+      <div id="info-panel">
+        <h3>지역을 클릭해보세요!</h3>
+        <p id="guide-text">상단의 월별 버튼을 누르거나 지도 핀을 클릭해 축제 정보를 확인하세요.</p>
+        
+        <div id="festival-info" class="festival-card hidden">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <span id="f-category" class="badge">카테고리</span>
+            <a id="f-name" href="#" target="_blank" class="festival-link">축제 이름</a>
+          </div>
+          <p><strong>📍 장소:</strong> <span id="f-location">장소</span></p>
+          <p><strong>📅 기간:</strong> <span id="f-date">기간</span></p>
+          <p id="f-desc">상세 설명이 여기에 표시됩니다.</p>
+          
+          <div id="health-box" class="health-card hidden">
+            <h4>🌿 한의학적 건강 팁</h4>
+            <p id="f-health">건강 설명이 여기에 표시됩니다.</p>
+          </div>
+          
+          <!-- ⭐ 축제 후기 영역 추가 ⭐ -->
+          <div class="f-review-section">
+            <h4 style="margin: 0 0 10px 0; color: #333;">💬 이 축제 다녀오셨나요?</h4>
+            <div id="f-reviews-list" class="f-review-list">
+              <!-- 후기 목록이 여기에 표시됨 -->
+            </div>
+            <div class="f-review-input-box">
+              <input type="text" id="f-review-input" placeholder="후기를 남겨보세요 (로그인 필요)">
+              <button id="btn-save-freview" class="btn btn-primary" style="padding: 8px 15px;">등록</button>
+            </div>
+          </div>
+          
+          <button id="like-btn" class="btn btn-like" style="display:none;">❤️ 이 축제 찜하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. 게시판 화면 ==================== -->
+  <div id="view-board" class="view-container hidden">
+    <div id="board-wrapper">
+      <div class="board-content">
+        
+        <div id="board-list-sec">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ff6b6b; padding-bottom: 10px; margin-bottom: 10px;">
+            <h2 style="margin: 0;">📝 자유 게시판</h2>
+            <button id="btn-go-write" class="btn btn-primary">글쓰기</button>
+          </div>
+          <div id="post-list-container"></div>
+        </div>
+
+        <div id="board-write-sec" class="hidden">
+          <h2>새 글 작성하기</h2>
+          <div class="form-group"><input type="text" id="post-title" placeholder="제목을 입력하세요"></div>
+          <div class="form-group"><textarea id="post-body" placeholder="내용을 입력하세요"></textarea></div>
+          <div style="text-align: right;">
+            <button id="btn-cancel-write" class="btn btn-secondary">취소</button>
+            <button id="btn-save-post" class="btn btn-primary">등록하기</button>
+          </div>
+        </div>
+
+        <div id="board-read-sec" class="hidden">
+          <button id="btn-back-to-list" class="btn btn-secondary" style="margin-bottom: 15px;">⬅ 목록으로</button>
+          <h2 id="post-read-title">제목</h2>
+          <div id="post-read-meta">정보</div>
+          <div id="post-read-body">내용</div>
+          
+          <div class="comment-section">
+            <h3>💬 댓글</h3>
+            <div id="comments-container"></div>
+            <div class="comment-input-box">
+              <input type="text" id="comment-input" placeholder="댓글을 남겨보세요 (로그인 필요)">
+              <button id="btn-save-comment" class="btn btn-primary">등록</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 스크립트 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    
-    // 코드에 키를 직접 적지 않고, window.ENV에 숨겨둔 키를 가져다 씁니다!
-    const firebaseConfig = window.ENV;
-    
-    // 파이어베이스 시작
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // 🚨 [여기에 본인의 Firebase Config를 꼭 넣으세요] 🚨
+    const firebaseConfig = {
+      apiKey: "본인의_API_KEY",
+      authDomain: "본인의_AUTH_DOMAIN",
+      projectId: "본인의_PROJECT_ID",
+      storageBucket: "본인의_STORAGE_BUCKET",
+      messagingSenderId: "본인의_MESSAGING_SENDER_ID",
+      appId: "본인의_APP_ID"
+    };
+
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let currentUser = null;
+    let currentFestival = "";
+    let currentPostId = null;
+
+    // 공통: 로그인 관리
+    document.getElementById('login-btn').addEventListener('click', () => {
+      signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert("로그인 실패"));
+    });
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) {
+        document.getElementById('user-name').innerText = user.displayName + "님";
+        document.getElementById('login-btn').classList.add('hidden');
+        document.getElementById('logout-btn').classList.remove('hidden');
+        document.getElementById('like-btn').style.display = 'block';
+      } else {
+        document.getElementById('user-name').innerText = "로그인해주세요";
+        document.getElementById('login-btn').classList.remove('hidden');
+        document.getElementById('logout-btn').classList.add('hidden');
+        document.getElementById('like-btn').style.display = 'none';
+      }
+    });
+
+    // 탭 전환
+    const tabMap = document.getElementById('tab-map');
+    const tabBoard = document.getElementById('tab-board');
+    const viewMap = document.getElementById('view-map');
+    const viewBoard = document.getElementById('view-board');
+
+    tabMap.addEventListener('click', () => {
+      tabMap.classList.add('active'); tabBoard.classList.remove('active');
+      viewMap.classList.remove('hidden'); viewBoard.classList.add('hidden');
+      map.invalidateSize();
+    });
+    tabBoard.addEventListener('click', () => {
+      tabBoard.classList.add('active'); tabMap.classList.remove('active');
+      viewBoard.classList.remove('hidden'); viewMap.classList.add('hidden');
+      loadPosts();
+    });
+
+    // ==========================================
+    // ⭐ 축제 후기(리뷰) 불러오기 함수
+    // ==========================================
+    async function loadFestivalReviews(festName) {
+      const container = document.getElementById('f-reviews-list');
+      container.innerHTML = "후기를 불러오는 중...";
+      try {
+        const q = query(collection(db, "festival_reviews"), where("festivalName", "==", festName));
+        const snapshot = await getDocs(q);
+        
+        let reviews = [];
+        snapshot.forEach(doc => reviews.push(doc.data()));
+        
+        // 시간순 정렬 (옛날 후기가 위로)
+        reviews.sort((a, b) => {
+          const timeA = a.createdAt ? a.createdAt.toMillis() : Date.now();
+          const timeB = b.createdAt ? b.createdAt.toMillis() : Date.now();
+          return timeA - timeB; 
+        });
+
+        container.innerHTML = "";
+        if (reviews.length === 0) {
+          container.innerHTML = "<span style='color:#999;'>아직 후기가 없습니다. 첫 후기를 남겨보세요!</span>";
+          return;
+        }
+
+        reviews.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'f-review-item';
+          const dateStr = r.createdAt ? r.createdAt.toDate().toLocaleDateString() : '방금 전';
+          div.innerHTML = `
+            <strong style="color:#555;">${r.authorName}</strong> 
+            <span style="color:#aaa; font-size:11px;">(${dateStr})</span>
+            <div style="margin-top:3px; color:#333;">${r.text}</div>
+          `;
+          container.appendChild(div);
+        });
+        
+        // 스크롤을 맨 아래로 이동
+        container.scrollTop = container.scrollHeight;
+      } catch(e) {
+        container.innerHTML = "후기를 불러오지 못했습니다.";
+      }
+    }
+
+    // ⭐ 축제 후기 등록 이벤트
+    document.getElementById('btn-save-freview').addEventListener('click', async () => {
+      if (!currentUser) return alert("로그인 후 이용할 수 있습니다.");
+      
+      const input = document.getElementById('f-review-input');
+      const text = input.value.trim();
+      if (!text) return alert("후기 내용을 입력해주세요.");
+
+      try {
+        await addDoc(collection(db, "festival_reviews"), {
+          festivalName: currentFestival,
+          text: text,
+          authorId: currentUser.uid,
+          authorName: currentUser.displayName,
+          createdAt: serverTimestamp()
+        });
+        input.value = ""; // 입력창 비우기
+        loadFestivalReviews(currentFestival); // 후기 목록 갱신
+      } catch (e) {
+        alert("후기 작성 오류: " + e.message);
+      }
+    });
+
+    // 지도 렌더링 및 축제 데이터
+    const map = L.map('map').setView([36.3, 127.8], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const markersGroup = L.layerGroup().addTo(map);
+
+    const festivals = [
+      { name: "화천 산천어축제", category: "먹거리", url: "https://www.narafestival.com/", lat: 38.106, lng: 127.708, loc: "강원도 화천군", date: "1월", months: [1], desc: "얼음낚시와 산천어 구이를 즐기는 겨울 축제.", healthTip: "산천어는 기력을 보충하고 위장을 튼튼하게 해줍니다." },
+      { name: "금산 인삼축제", category: "먹거리", url: "https://www.geumsan.go.kr/insam/", lat: 36.108, lng: 127.488, loc: "충청남도 금산군", date: "9월~10월", months: [9, 10], desc: "전국 최고의 인삼과 한방 약초를 직접 시식하고 체험하는 건강 축제.", healthTip: "인삼은 한의학에서 대보원기(大補元氣)라 하여 몸의 원기를 크게 보하고 둔해진 소화 기능을 살려줍니다." },
+      { name: "보성 다향대축제", category: "먹거리", url: "https://dahyang.boseong.go.kr/", lat: 34.771, lng: 127.079, loc: "전라남도 보성군", date: "5월", months: [5], desc: "녹차밭 풍경과 차 따기 체험 축제.", healthTip: "녹차는 머리를 맑게 하고 열을 내려주며 독소 배출에 탁월합니다." },
+      { name: "진해 군항제", category: "관광", url: "https://www.changwon.go.kr/depart/contents.do?mId=0301010100", lat: 35.149, lng: 128.660, loc: "경상남도 창원시", date: "3월~4월", months: [3, 4], desc: "국내 최대 규모의 화려한 봄 벚꽃 풍경을 감상하는 명품 관광 축제.", healthTip: "" },
+      { name: "보령 머드축제", category: "관광", url: "https://mudfestival.or.kr/", lat: 36.305, lng: 126.518, loc: "충청남도 보령시", date: "7월~8월", months: [7, 8], desc: "신나는 진흙 체험 및 해수욕 관광 축제.", healthTip: "" }
+    ];
+
+    function renderMapMarkers(selectedMonth) {
+      markersGroup.clearLayers();
+      const filtered = festivals.filter(f => selectedMonth === 'all' || f.months.includes(Number(selectedMonth)));
+
+      filtered.forEach(fest => {
+        const marker = L.marker([fest.lat, fest.lng]);
+        marker.bindPopup(`<b>[${fest.category}] ${fest.name}</b>`);
+        
+        marker.on('click', () => {
+          document.getElementById('festival-info').classList.remove('hidden');
+          const nameLink = document.getElementById('f-name');
+          nameLink.innerText = fest.url ? fest.name + " 🔗" : fest.name;
+          nameLink.href = fest.url || "#";
+          
+          document.getElementById('f-location').innerText = fest.loc;
+          document.getElementById('f-date').innerText = fest.date;
+          document.getElementById('f-desc').innerText = fest.desc;
+
+          const catEl = document.getElementById('f-category');
+          catEl.innerText = fest.category;
+          catEl.className = fest.category === '먹거리' ? 'badge badge-food' : 'badge badge-tour';
+
+          const healthBox = document.getElementById('health-box');
+          if (fest.healthTip) {
+            document.getElementById('f-health').innerText = fest.healthTip;
+            healthBox.classList.remove('hidden');
+          } else {
+            healthBox.classList.add('hidden');
+          }
+          
+          currentFestival = fest.name;
+          loadFestivalReviews(currentFestival); // ⭐ 마커 클릭 시 해당 축제의 후기 불러오기
+        });
+        markersGroup.addLayer(marker);
+      });
+    }
+    renderMapMarkers('all');
+
+    document.querySelectorAll('.month-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderMapMarkers(e.target.getAttribute('data-month'));
+        document.getElementById('festival-info').classList.add('hidden');
+      });
+    });
+
+    document.getElementById('like-btn').addEventListener('click', async () => {
+      if (!currentUser) return alert("로그인이 필요합니다.");
+      await addDoc(collection(db, "favorites"), { userId: currentUser.uid, userName: currentUser.displayName, festivalName: currentFestival, timestamp: serverTimestamp() });
+      alert("찜하기 완료!");
+    });
+
+    // 자유 게시판 로직 (기존과 동일)
+    const secList = document.getElementById('board-list-sec');
+    const secWrite = document.getElementById('board-write-sec');
+    const secRead = document.getElementById('board-read-sec');
     
-    // (이후 게시판 글쓰기, 로그인 로직 등 기존 코드 동일하게 작성)
+    function showBoardSection(section) {
+      secList.classList.add('hidden'); secWrite.classList.add('hidden'); secRead.classList.add('hidden');
+      section.classList.remove('hidden');
+    }
+
+    async function loadPosts() {
+      showBoardSection(secList);
+      const container = document.getElementById('post-list-container');
+      container.innerHTML = "<p style='text-align:center;'>불러오는 중...</p>";
+      try {
+        const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        container.innerHTML = "";
+        if(snapshot.empty) return container.innerHTML = "<p style='text-align:center; color:#888;'>첫 번째 글을 작성해보세요!</p>";
+
+        snapshot.forEach((docSnap) => {
+          const post = docSnap.data();
+          const dateStr = post.createdAt ? post.createdAt.toDate().toLocaleDateString() : '방금 전';
+          const div = document.createElement('div');
+          div.className = 'post-item';
+          div.innerHTML = `<div><p class="post-title">${post.title}</p><p class="post-meta">${post.authorName} | ${dateStr}</p></div>`;
+          div.onclick = () => readPost(docSnap.id, post);
+          container.appendChild(div);
+        });
+      } catch(e) { container.innerHTML = "<p>게시글 불러오기 실패</p>"; }
+    }
+
+    document.getElementById('btn-go-write').addEventListener('click', () => {
+      if (!currentUser) return alert("로그인 후 이용할 수 있습니다.");
+      document.getElementById('post-title').value = ""; document.getElementById('post-body').value = "";
+      showBoardSection(secWrite);
+    });
+    document.getElementById('btn-cancel-write').addEventListener('click', loadPosts);
+
+    document.getElementById('btn-save-post').addEventListener('click', async () => {
+      const title = document.getElementById('post-title').value.trim();
+      const body = document.getElementById('post-body').value.trim();
+      if(!title || !body) return alert("제목과 내용을 모두 입력해주세요.");
+      
+      try {
+        await addDoc(collection(db, "posts"), { title, body, authorId: currentUser.uid, authorName: currentUser.displayName, createdAt: serverTimestamp() });
+        alert("게시글이 등록되었습니다."); loadPosts();
+      } catch (e) { alert("오류: " + e.message); }
+    });
+
+    async function readPost(id, post) {
+      currentPostId = id;
+      document.getElementById('post-read-title').innerText = post.title;
+      const dateStr = post.createdAt ? post.createdAt.toDate().toLocaleDateString() : '방금 전';
+      document.getElementById('post-read-meta').innerText = `${post.authorName} | ${dateStr}`;
+      document.getElementById('post-read-body').innerText = post.body;
+      showBoardSection(secRead); loadComments(id);
+    }
+    document.getElementById('btn-back-to-list').addEventListener('click', loadPosts);
+
+    async function loadComments(postId) {
+      const container = document.getElementById('comments-container');
+      container.innerHTML = "불러오는 중...";
+      try {
+        const q = query(collection(db, "comments"), where("postId", "==", postId));
+        const snapshot = await getDocs(q);
+        let comments = [];
+        snapshot.forEach(doc => comments.push(doc.data()));
+        comments.sort((a, b) => {
+          const timeA = a.createdAt ? a.createdAt.toMillis() : Date.now();
+          const timeB = b.createdAt ? b.createdAt.toMillis() : Date.now();
+          return timeA - timeB;
+        });
+
+        container.innerHTML = "";
+        if(comments.length === 0) return container.innerHTML = "<p style='color:#888; font-size:13px;'>등록된 댓글이 없습니다.</p>";
+        comments.forEach(c => {
+          const div = document.createElement('div'); div.className = 'comment-item';
+          const timeStr = c.createdAt ? c.createdAt.toDate().toLocaleString() : '방금 전';
+          div.innerHTML = `<div class="comment-meta">${c.authorName} <span style="font-weight:normal; color:#aaa; font-size:11px;">(${timeStr})</span></div><div>${c.text}</div>`;
+          container.appendChild(div);
+        });
+      } catch(e) { container.innerHTML = "댓글 오류 발생"; }
+    }
+
+    document.getElementById('btn-save-comment').addEventListener('click', async () => {
+      if (!currentUser) return alert("로그인 후 댓글을 남길 수 있습니다.");
+      const input = document.getElementById('comment-input'); const text = input.value.trim();
+      if(!text) return alert("댓글 내용을 입력해주세요.");
+      try {
+        await addDoc(collection(db, "comments"), { postId: currentPostId, text, authorId: currentUser.uid, authorName: currentUser.displayName, createdAt: serverTimestamp() });
+        input.value = ""; loadComments(currentPostId);
+      } catch (e) { alert("댓글 작성 오류: " + e.message); }
+    });
   </script>
 </body>
 </html>
