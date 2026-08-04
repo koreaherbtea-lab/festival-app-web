@@ -152,6 +152,9 @@
           </div>
           <p><strong>📍 장소:</strong> <span id="f-location">장소</span></p>
           <p><strong>📅 기간:</strong> <span id="f-date">기간</span></p>
+          <div id="travel-time-box" class="hidden" style="margin: 8px 0; padding: 8px 10px; background:#f0fdf4; border-radius:6px; font-size:13px; color:#166534;">
+            🚗 현재 위치에서 예상 이동: <strong id="f-travel-time">-</strong>
+          </div>
           <p id="f-desc">상세 설명이 여기에 표시됩니다.</p>
           
           <div id="health-box" class="health-card hidden">
@@ -173,6 +176,12 @@
           </div>
           
           <button id="like-btn" class="btn btn-like" style="display:none;">❤️ 이 축제 찜하기</button>
+        </div>
+
+        <!-- ⭐ 다음 추천 여행지 카드 (현재 위치에서 가장 가까운 축제) ⭐ -->
+        <div id="next-recommend" class="festival-card hidden" style="border: 2px dashed #2f9e44;">
+          <h4 style="margin: 0 0 10px 0; color: #2f9e44;">🚀 다음 추천 여행지</h4>
+          <div id="recommend-content"><!-- JS로 채워짐 --></div>
         </div>
       </div>
     </div>
@@ -400,6 +409,84 @@
       }
     });
 
+    // ==========================================
+    // ⭐ 위치 기반 기능: 거리 계산 & 예상 이동시간 & 추천 여행지
+    // ==========================================
+    let userLat = null, userLng = null;
+
+    function toRad(deg) { return deg * Math.PI / 180; }
+
+    // 하버사인 공식으로 두 좌표 간 직선거리(km) 계산
+    function getDistanceKm(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // 직선거리 기준 대략적인 자동차 이동시간 추정 (평균 시속 60km 가정 — 실제 도로 상황에 따라 달라질 수 있음)
+    function formatTravelTime(distanceKm) {
+      const totalMinutes = Math.round((distanceKm / 60) * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      if (h === 0) return `약 ${m}분`;
+      if (m === 0) return `약 ${h}시간`;
+      return `약 ${h}시간 ${m}분`;
+    }
+
+    function requestUserLocation() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          updateNextRecommendation();
+          // 이미 카드가 열려 있는 축제가 있다면 이동시간도 즉시 갱신
+          if (currentFestival) {
+            const fest = festivals.find(f => f.name === currentFestival);
+            if (fest) updateTravelTime(fest);
+          }
+        },
+        (err) => { console.warn("위치 정보를 가져오지 못했습니다:", err.message); },
+        { enableHighAccuracy: false, timeout: 8000 }
+      );
+    }
+
+    function updateTravelTime(fest) {
+      const box = document.getElementById('travel-time-box');
+      if (userLat == null) { box.classList.add('hidden'); return; }
+      const dist = getDistanceKm(userLat, userLng, fest.lat, fest.lng);
+      document.getElementById('f-travel-time').innerText = `${dist.toFixed(1)}km · ${formatTravelTime(dist)} (직선거리 기준 추정)`;
+      box.classList.remove('hidden');
+    }
+
+    function updateNextRecommendation() {
+      const box = document.getElementById('next-recommend');
+      const content = document.getElementById('recommend-content');
+      if (userLat == null) { box.classList.add('hidden'); return; }
+
+      let nearest = null, nearestDist = Infinity;
+      festivals.forEach(f => {
+        if (f.name === currentFestival) return; // 지금 보고 있는 축제는 추천에서 제외
+        const d = getDistanceKm(userLat, userLng, f.lat, f.lng);
+        if (d < nearestDist) { nearestDist = d; nearest = f; }
+      });
+      if (!nearest) { box.classList.add('hidden'); return; }
+
+      content.innerHTML = `
+        <p style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:#333;">${escapeHtml(nearest.name)}</p>
+        <p style="margin:0 0 4px 0; font-size:13px; color:#666;">📍 ${escapeHtml(nearest.loc)} · 📅 ${escapeHtml(nearest.date)}</p>
+        <p style="margin:0 0 10px 0; font-size:13px; color:#2f9e44; font-weight:bold;">🚗 현재 위치에서 ${nearestDist.toFixed(1)}km · ${formatTravelTime(nearestDist)}</p>
+        <button id="btn-goto-recommend" class="btn btn-primary" style="width:100%;">이 축제 보러가기</button>
+      `;
+      box.classList.remove('hidden');
+      document.getElementById('btn-goto-recommend').onclick = () => {
+        map.setView([nearest.lat, nearest.lng], 9);
+        selectFestival(nearest);
+      };
+    }
+
     // 지도 렌더링 및 축제 데이터
     const map = L.map('map').setView([36.3, 127.8], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -413,6 +500,35 @@
       { name: "보령 머드축제", category: "관광", url: "https://mudfestival.or.kr/", lat: 36.305, lng: 126.518, loc: "충청남도 보령시", date: "7월~8월", months: [7, 8], desc: "신나는 진흙 체험 및 해수욕 관광 축제.", healthTip: "" }
     ];
 
+    // 마커 클릭 및 '이 축제 보러가기' 버튼에서 공통으로 쓰는 축제 선택 로직
+    function selectFestival(fest) {
+      document.getElementById('festival-info').classList.remove('hidden');
+      const nameLink = document.getElementById('f-name');
+      nameLink.innerText = fest.url ? fest.name + " 🔗" : fest.name;
+      nameLink.href = fest.url || "#";
+
+      document.getElementById('f-location').innerText = fest.loc;
+      document.getElementById('f-date').innerText = fest.date;
+      document.getElementById('f-desc').innerText = fest.desc;
+
+      const catEl = document.getElementById('f-category');
+      catEl.innerText = fest.category;
+      catEl.className = fest.category === '먹거리' ? 'badge badge-food' : 'badge badge-tour';
+
+      const healthBox = document.getElementById('health-box');
+      if (fest.healthTip) {
+        document.getElementById('f-health').innerText = fest.healthTip;
+        healthBox.classList.remove('hidden');
+      } else {
+        healthBox.classList.add('hidden');
+      }
+
+      currentFestival = fest.name;
+      loadFestivalReviews(currentFestival); // 해당 축제의 후기 불러오기
+      updateTravelTime(fest);               // 예상 이동시간 갱신
+      updateNextRecommendation();           // 다음 추천 여행지 갱신 (현재 축제 제외)
+    }
+
     function renderMapMarkers(selectedMonth) {
       markersGroup.clearLayers();
       const filtered = festivals.filter(f => selectedMonth === 'all' || f.months.includes(Number(selectedMonth)));
@@ -420,36 +536,13 @@
       filtered.forEach(fest => {
         const marker = L.marker([fest.lat, fest.lng]);
         marker.bindPopup(`<b>[${fest.category}] ${fest.name}</b>`);
-        
-        marker.on('click', () => {
-          document.getElementById('festival-info').classList.remove('hidden');
-          const nameLink = document.getElementById('f-name');
-          nameLink.innerText = fest.url ? fest.name + " 🔗" : fest.name;
-          nameLink.href = fest.url || "#";
-          
-          document.getElementById('f-location').innerText = fest.loc;
-          document.getElementById('f-date').innerText = fest.date;
-          document.getElementById('f-desc').innerText = fest.desc;
-
-          const catEl = document.getElementById('f-category');
-          catEl.innerText = fest.category;
-          catEl.className = fest.category === '먹거리' ? 'badge badge-food' : 'badge badge-tour';
-
-          const healthBox = document.getElementById('health-box');
-          if (fest.healthTip) {
-            document.getElementById('f-health').innerText = fest.healthTip;
-            healthBox.classList.remove('hidden');
-          } else {
-            healthBox.classList.add('hidden');
-          }
-          
-          currentFestival = fest.name;
-          loadFestivalReviews(currentFestival); // ⭐ 마커 클릭 시 해당 축제의 후기 불러오기
-        });
+        marker.on('click', () => selectFestival(fest));
         markersGroup.addLayer(marker);
       });
     }
     renderMapMarkers('all');
+    requestUserLocation(); // 페이지 진입 시 위치 권한 요청 (거부해도 나머지 기능은 정상 동작)
+
 
     document.querySelectorAll('.month-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
