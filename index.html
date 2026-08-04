@@ -677,10 +677,10 @@
       });
     }
 
-    // '전체보기' 클릭 시(모바일에서만) 월 목록을 펼침
+    // '전체보기' 클릭 시(모바일에서만) 월 목록을 펼쳤다 접었다 토글
     allMonthBtn.addEventListener('click', () => {
       if (isMobileView()) {
-        monthBarEl.classList.add('expanded');
+        monthBarEl.classList.toggle('expanded');
         updateMonthBarForMobile();
       }
     });
