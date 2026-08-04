@@ -116,7 +116,7 @@
     <div class="nav-tabs" id="nav-tabs">
       <button id="tab-about" class="nav-btn">소개</button>
       <button id="tab-map" class="nav-btn active">보기</button>
-      <button id="tab-cafe" class="nav-btn">까페</button>
+      <button id="tab-cafe" class="nav-btn">카페</button>
       <button id="tab-board" class="nav-btn">게시판</button>
     </div>
     <div id="auth-box">
@@ -192,7 +192,7 @@
     </div>
   </div>
 
-  <!-- ==================== 2. 까페 화면 (회원 추천 카페) ==================== -->
+  <!-- ==================== 2. 카페 화면 (회원 추천 카페) ==================== -->
   <div id="view-cafe" class="view-container hidden" style="flex-direction: column;">
     <div style="padding: 12px 15px; background:#fff7e6; border-bottom:1px solid #ffe0a3; font-size:13px; color:#8a6d3b; flex-shrink:0;">
       ☕ 이 페이지는 <strong>회원이 직접</strong> 마음에 드는 카페를 등록하고 추천하는 공간입니다. 등록된 정보는 운영자가 검증한 내용이 아니니 참고용으로만 확인해주세요.
@@ -201,7 +201,7 @@
       <div id="cafe-map" class="map-box"></div>
       <div id="cafe-info-panel" class="info-panel-box">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-          <h3 style="margin:0;">☕ 까페 추천</h3>
+          <h3 style="margin:0;">☕ 카페 추천</h3>
           <button id="btn-go-cafe-write" class="btn btn-primary">카페 등록하기</button>
         </div>
         <p id="cafe-guide-text" style="color:#666; font-size:14px;">지도 위 핀을 클릭하면 등록된 카페 정보를 볼 수 있어요. 마음에 드는 카페가 있다면 직접 등록해보세요!</p>
@@ -910,7 +910,7 @@
     });
 
     // ==========================================
-    // ⭐ 까페(회원 추천 카페) 기능
+    // ⭐ 카페(회원 추천 카페) 기능
     // ==========================================
     let cafeMap = null;
     let cafeMarkersGroup = null;
@@ -918,7 +918,7 @@
     let currentCafeId = null;
     let cafeImageDataUrl = null; // 압축된 이미지(base64)를 임시로 들고 있는 변수
 
-    // --- 지도 초기화 (까페 탭을 처음 열 때 한 번만) ---
+    // --- 지도 초기화 (카페 탭을 처음 열 때 한 번만) ---
     function initCafeMapIfNeeded() {
       if (cafeMap) return;
       cafeMap = L.map('cafe-map').setView([36.3, 127.8], 7);
@@ -987,7 +987,7 @@
       }
     });
 
-    // --- 까페 목록 불러오기 & 지도 마커 표시 ---
+    // --- 카페 목록 불러오기 & 지도 마커 표시 ---
     async function loadCafes() {
       try {
         const snapshot = await getDocs(collection(db, "cafes"));
