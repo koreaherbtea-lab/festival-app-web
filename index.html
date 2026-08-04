@@ -43,6 +43,8 @@
     .badge-food { background-color: #ff9f43; }
     .badge-tour { background-color: #54a0ff; }
     .badge-api { background-color: #8395a7; }
+    .badge-cafe { background-color: #795548; }
+    .badge-restaurant { background-color: #ff9f43; }
     
     .festival-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
     .health-card { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
@@ -116,7 +118,7 @@
     <div class="nav-tabs" id="nav-tabs">
       <button id="tab-about" class="nav-btn">소개</button>
       <button id="tab-map" class="nav-btn active">보기</button>
-      <button id="tab-cafe" class="nav-btn">카페</button>
+      <button id="tab-cafe" class="nav-btn">카페·식당</button>
       <button id="tab-board" class="nav-btn">게시판</button>
     </div>
     <div id="auth-box">
@@ -195,22 +197,44 @@
   <!-- ==================== 2. 카페 화면 (회원 추천 카페) ==================== -->
   <div id="view-cafe" class="view-container hidden" style="flex-direction: column;">
     <div style="padding: 12px 15px; background:#fff7e6; border-bottom:1px solid #ffe0a3; font-size:13px; color:#8a6d3b; flex-shrink:0;">
-      ☕ 이 페이지는 <strong>회원이 직접</strong> 마음에 드는 카페를 등록하고 추천하는 공간입니다. 등록된 정보는 운영자가 검증한 내용이 아니니 참고용으로만 확인해주세요.
+      ☕🍴 이 페이지는 <strong>회원이 직접</strong> 마음에 드는 카페·식당을 등록하고 추천하는 공간입니다. 등록된 정보는 운영자가 검증한 내용이 아니니 참고용으로만 확인해주세요.
     </div>
     <div id="cafe-map-wrapper" class="map-wrapper-box">
       <div id="cafe-map" class="map-box"></div>
       <div id="cafe-info-panel" class="info-panel-box">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-          <h3 style="margin:0;">☕ 카페 추천</h3>
-          <button id="btn-go-cafe-write" class="btn btn-primary">카페 등록하기</button>
+          <h3 style="margin:0;">☕🍴 카페·식당 추천</h3>
+          <button id="btn-go-cafe-write" class="btn btn-primary">등록하기</button>
         </div>
-        <p id="cafe-guide-text" style="color:#666; font-size:14px;">지도 위 핀을 클릭하면 등록된 카페 정보를 볼 수 있어요. 마음에 드는 카페가 있다면 직접 등록해보세요!</p>
 
-        <!-- 카페 등록 폼 -->
+        <!-- 업종 필터 체크박스 (기본값: 둘 다 체크) -->
+        <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px; padding:10px 12px; background:#f8f9fa; border-radius:8px;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="filter-cafe" checked style="width:16px; height:16px;"> ☕ 카페
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+            <input type="checkbox" id="filter-restaurant" checked style="width:16px; height:16px;"> 🍴 식당
+          </label>
+        </div>
+
+        <p id="cafe-guide-text" style="color:#666; font-size:14px;">지도 위 핀을 클릭하면 등록된 카페·식당 정보를 볼 수 있어요. 마음에 드는 곳이 있다면 직접 등록해보세요!</p>
+
+        <!-- 카페·식당 등록 폼 -->
         <div id="cafe-write-sec" class="hidden">
-          <h4 style="margin:10px 0;">☕ 새 카페 등록</h4>
+          <h4 style="margin:10px 0;">☕🍴 새 장소 등록</h4>
           <div class="form-group">
-            <label style="font-size:13px; color:#555; display:block; margin-bottom:4px;">카페 이름 <span style="color:#e03131;">*</span></label>
+            <label style="font-size:13px; color:#555; display:block; margin-bottom:4px;">구분 <span style="color:#e03131;">*</span></label>
+            <div style="display:flex; gap:16px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                <input type="radio" name="cafe-category" id="cafe-category-cafe" value="cafe" checked> ☕ 카페
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:14px; cursor:pointer;">
+                <input type="radio" name="cafe-category" id="cafe-category-restaurant" value="restaurant"> 🍴 식당
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="font-size:13px; color:#555; display:block; margin-bottom:4px;">이름 <span style="color:#e03131;">*</span></label>
             <input type="text" id="cafe-name-input" placeholder="예: 온기 카페" maxlength="50">
           </div>
           <div class="form-group">
@@ -219,7 +243,7 @@
           </div>
           <div class="form-group">
             <label style="font-size:13px; color:#555; display:block; margin-bottom:4px;">후기 <span style="color:#e03131;">*</span></label>
-            <textarea id="cafe-review-input" placeholder="이 카페를 추천하는 이유를 알려주세요" maxlength="1000"></textarea>
+            <textarea id="cafe-review-input" placeholder="이곳을 추천하는 이유를 알려주세요" maxlength="1000"></textarea>
           </div>
           <div class="form-group">
             <label style="font-size:13px; color:#555; display:block; margin-bottom:4px;">이미지 (선택)</label>
@@ -234,11 +258,14 @@
           </div>
         </div>
 
-        <!-- 카페 상세 정보 카드 -->
+        <!-- 카페·식당 상세 정보 카드 -->
         <div id="cafe-info" class="festival-card hidden">
-          <img id="cafe-detail-image" class="hidden" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:12px;" alt="카페 이미지">
+          <img id="cafe-detail-image" class="hidden" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:12px;" alt="장소 이미지">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-            <h3 id="cafe-detail-name" style="margin:0 0 6px 0;">카페 이름</h3>
+            <div>
+              <span id="cafe-detail-category" class="badge badge-tour" style="margin-bottom:6px; display:inline-block;">카페</span>
+              <h3 id="cafe-detail-name" style="margin:4px 0 6px 0;">이름</h3>
+            </div>
             <button id="btn-delete-cafe" class="hidden" style="background:none; border:1px solid #e03131; color:#e03131; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:6px; white-space:nowrap;">삭제</button>
           </div>
           <p><strong>📍 주소:</strong> <span id="cafe-detail-address"></span></p>
@@ -999,20 +1026,37 @@
 
     function renderCafeMarkers() {
       cafeMarkersGroup.clearLayers();
+      const showCafe = document.getElementById('filter-cafe').checked;
+      const showRestaurant = document.getElementById('filter-restaurant').checked;
+
       cafes.forEach(cafe => {
         if (cafe.lat == null || cafe.lng == null) return;
+        const category = cafe.category || 'cafe'; // 이전 데이터 호환: 값이 없으면 카페로 취급
+        if (category === 'cafe' && !showCafe) return;
+        if (category === 'restaurant' && !showRestaurant) return;
+
+        const icon = category === 'restaurant' ? '🍴' : '☕';
         const marker = L.marker([cafe.lat, cafe.lng]);
-        marker.bindPopup(`<b>☕ ${cafe.name}</b>`);
+        marker.bindPopup(`<b>${icon} ${cafe.name}</b>`);
         marker.on('click', () => selectCafe(cafe));
         cafeMarkersGroup.addLayer(marker);
       });
     }
 
-    // --- 카페 상세 카드 표시 (지도 핀 클릭 시) ---
+    // 필터 체크박스 변경 시 즉시 재표시 (기본값: 둘 다 체크)
+    document.getElementById('filter-cafe').addEventListener('change', renderCafeMarkers);
+    document.getElementById('filter-restaurant').addEventListener('change', renderCafeMarkers);
+
+    // --- 카페·식당 상세 카드 표시 (지도 핀 클릭 시) ---
     function selectCafe(cafe) {
       document.getElementById('cafe-write-sec').classList.add('hidden');
       document.getElementById('cafe-guide-text').classList.add('hidden');
       document.getElementById('cafe-info').classList.remove('hidden');
+
+      const category = cafe.category || 'cafe';
+      const catEl = document.getElementById('cafe-detail-category');
+      catEl.innerText = category === 'restaurant' ? '🍴 식당' : '☕ 카페';
+      catEl.className = category === 'restaurant' ? 'badge badge-restaurant' : 'badge badge-cafe';
 
       document.getElementById('cafe-detail-name').innerText = cafe.name;
       document.getElementById('cafe-detail-address').innerText = cafe.address;
@@ -1034,7 +1078,7 @@
     }
 
     async function deleteCafe(cafeId) {
-      if (!confirm("이 카페 등록 정보를 삭제하시겠습니까?")) return;
+      if (!confirm("이 등록 정보를 삭제하시겠습니까?")) return;
       try {
         await deleteDoc(doc(db, "cafes", cafeId));
         document.getElementById('cafe-info').classList.add('hidden');
@@ -1045,7 +1089,7 @@
 
     // --- 카페 등록 폼 열기/닫기 ---
     document.getElementById('btn-go-cafe-write').addEventListener('click', () => {
-      if (!currentUser) return alert("로그인 후 카페를 등록할 수 있습니다.");
+      if (!currentUser) return alert("로그인 후 등록할 수 있습니다.");
       document.getElementById('cafe-info').classList.add('hidden');
       document.getElementById('cafe-guide-text').classList.add('hidden');
       document.getElementById('cafe-write-sec').classList.remove('hidden');
@@ -1055,15 +1099,16 @@
       document.getElementById('cafe-guide-text').classList.remove('hidden');
     });
 
-    // --- 카페 등록 저장 ---
+    // --- 카페·식당 등록 저장 ---
     document.getElementById('btn-save-cafe').addEventListener('click', async () => {
-      if (!currentUser) return alert("로그인 후 카페를 등록할 수 있습니다.");
+      if (!currentUser) return alert("로그인 후 등록할 수 있습니다.");
+      const category = document.querySelector('input[name="cafe-category"]:checked').value; // 'cafe' | 'restaurant'
       const name = document.getElementById('cafe-name-input').value.trim();
       const address = document.getElementById('cafe-address-input').value.trim();
       const review = document.getElementById('cafe-review-input').value.trim();
 
       if (!name || !address || !review) {
-        return alert("카페 이름, 주소, 후기는 반드시 입력해야 합니다.");
+        return alert("이름, 주소, 후기는 반드시 입력해야 합니다.");
       }
 
       const saveBtn = document.getElementById('btn-save-cafe');
@@ -1076,7 +1121,7 @@
           return;
         }
         await addDoc(collection(db, "cafes"), {
-          name, address, review,
+          category, name, address, review,
           image: cafeImageDataUrl || "",
           lat: geo.lat, lng: geo.lng,
           authorId: currentUser.uid,
@@ -1085,6 +1130,7 @@
         });
 
         // 폼 초기화
+        document.getElementById('cafe-category-cafe').checked = true;
         document.getElementById('cafe-name-input').value = "";
         document.getElementById('cafe-address-input').value = "";
         document.getElementById('cafe-review-input').value = "";
@@ -1094,7 +1140,7 @@
 
         document.getElementById('cafe-write-sec').classList.add('hidden');
         document.getElementById('cafe-guide-text').classList.remove('hidden');
-        alert("카페가 등록되었습니다!");
+        alert("등록되었습니다!");
         loadCafes();
       } catch (e) {
         alert("등록 실패: " + e.message);
