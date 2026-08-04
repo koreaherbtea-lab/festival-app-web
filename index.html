@@ -10,17 +10,17 @@
   
   <style>
     body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; flex-direction: column; background-color: #f8f9fa; }
-    header { background-color: #ff6b6b; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    header { background-color: #2f9e44; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     
     /* 상단 네비게이션 탭 */
     .nav-tabs { display: flex; gap: 10px; }
     .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .nav-btn.active, .nav-btn:hover { background: white; color: #ff6b6b; }
+    .nav-btn.active, .nav-btn:hover { background: white; color: #2f9e44; }
 
     /* 기본 버튼 & 유틸 */
     .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    .btn-login { background-color: white; color: #ff6b6b; }
-    .btn-primary { background-color: #ff6b6b; color: white; }
+    .btn-login { background-color: white; color: #2f9e44; }
+    .btn-primary { background-color: #2f9e44; color: white; }
     .btn-secondary { background-color: #888; color: white; }
     .hidden { display: none !important; }
 
@@ -31,8 +31,8 @@
     #month-bar { background-color: #ffffff; padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 2px solid #eee; white-space: nowrap; }
     #month-bar::-webkit-scrollbar { height: 6px; }
     #month-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-    .month-btn { padding: 8px 16px; border: 1px solid #ff6b6b; background: white; color: #ff6b6b; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; flex-shrink: 0; }
-    .month-btn:hover, .month-btn.active { background: #ff6b6b; color: white; }
+    .month-btn { padding: 8px 16px; border: 1px solid #2f9e44; background: white; color: #2f9e44; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; flex-shrink: 0; }
+    .month-btn:hover, .month-btn.active { background: #2f9e44; color: white; }
     
     #map-wrapper { display: flex; flex: 1; width: 100%; }
     #map { flex: 2; height: 100%; }
@@ -46,7 +46,7 @@
     .health-card { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
     .health-card h4 { margin: 0 0 6px 0; color: #166534; font-size: 14px; }
     .health-card p { margin: 0; color: #15803d; font-size: 13px; line-height: 1.5; }
-    .festival-link { color: #ff6b6b; text-decoration: none; font-size: 22px; font-weight: bold; }
+    .festival-link { color: #2f9e44; text-decoration: none; font-size: 22px; font-weight: bold; }
     .festival-link:hover { text-decoration: underline; }
     
     /* 축제 후기 영역 CSS */
@@ -163,7 +163,7 @@
       <div class="board-content">
         
         <div id="board-list-sec">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ff6b6b; padding-bottom: 10px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2f9e44; padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="margin: 0;">📝 자유 게시판</h2>
             <button id="btn-go-write" class="btn btn-primary">글쓰기</button>
           </div>
