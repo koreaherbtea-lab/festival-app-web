@@ -25,7 +25,8 @@
     .hidden { display: none !important; }
 
     /* 뷰 컨테이너 (지도 vs 게시판) */
-    .view-container { display: flex; flex: 1; overflow: hidden; width: 100%; }
+    .view-container { display: flex; flex: 1; overflow: hidden; width: 100%; min-height: 0; }
+    #map-wrapper { min-height: 0; }
     
     /* === 지도 화면 CSS === */
     #month-bar { background-color: #ffffff; padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 2px solid #eee; white-space: nowrap; }
@@ -85,9 +86,9 @@
     /* === 모바일 반응형 (768px 이하) === */
     @media (max-width: 768px) {
       /* 지도를 위, 축제 안내를 아래로 세로 배치 */
-      #map-wrapper { flex-direction: column; gap: 12px; padding: 12px; }
+      #map-wrapper { flex-direction: column; gap: 12px; padding: 12px; min-height: 0; }
       #map { flex: none; width: 100%; height: 40vh; }
-      #info-panel { flex: 1; width: 100%; }
+      #info-panel { flex: 1; width: 100%; min-height: 0; -webkit-overflow-scrolling: touch; }
 
       /* 헤더 영역이 좁은 화면에서 줄바꿈되도록 */
       header { padding: 12px 15px; }
