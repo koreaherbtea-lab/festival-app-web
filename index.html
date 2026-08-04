@@ -42,6 +42,7 @@
     .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
     .badge-food { background-color: #ff9f43; }
     .badge-tour { background-color: #54a0ff; }
+    .badge-api { background-color: #8395a7; }
     
     .festival-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
     .health-card { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
@@ -146,6 +147,7 @@
         <p id="guide-text">상단의 월별 버튼을 누르거나 지도 핀을 클릭해 축제 정보를 확인하세요.</p>
         
         <div id="festival-info" class="festival-card hidden">
+          <img id="f-image" class="hidden" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:12px;" src="" alt="축제 이미지">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
             <span id="f-category" class="badge">카테고리</span>
             <a id="f-name" href="#" target="_blank" class="festival-link">축제 이름</a>
@@ -492,7 +494,7 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const markersGroup = L.layerGroup().addTo(map);
 
-    const festivals = [
+    let festivals = [
       { name: "화천 산천어축제", category: "먹거리", url: "https://www.narafestival.com/", lat: 38.106, lng: 127.708, loc: "강원도 화천군", date: "1월", months: [1], desc: "얼음낚시와 산천어 구이를 즐기는 겨울 축제.", healthTip: "산천어는 기력을 보충하고 위장을 튼튼하게 해줍니다." },
       { name: "금산 인삼축제", category: "먹거리", url: "https://www.geumsan.go.kr/insam/", lat: 36.108, lng: 127.488, loc: "충청남도 금산군", date: "9월~10월", months: [9, 10], desc: "전국 최고의 인삼과 한방 약초를 직접 시식하고 체험하는 건강 축제.", healthTip: "인삼은 한의학에서 대보원기(大補元氣)라 하여 몸의 원기를 크게 보하고 둔해진 소화 기능을 살려줍니다." },
       { name: "보성 다향대축제", category: "먹거리", url: "https://dahyang.boseong.go.kr/", lat: 34.771, lng: 127.079, loc: "전라남도 보성군", date: "5월", months: [5], desc: "녹차밭 풍경과 차 따기 체험 축제.", healthTip: "녹차는 머리를 맑게 하고 열을 내려주며 독소 배출에 탁월합니다." },
@@ -507,13 +509,23 @@
       nameLink.innerText = fest.url ? fest.name + " 🔗" : fest.name;
       nameLink.href = fest.url || "#";
 
+      const imgEl = document.getElementById('f-image');
+      if (fest.image) {
+        imgEl.src = fest.image;
+        imgEl.classList.remove('hidden');
+      } else {
+        imgEl.classList.add('hidden');
+      }
+
       document.getElementById('f-location').innerText = fest.loc;
       document.getElementById('f-date').innerText = fest.date;
       document.getElementById('f-desc').innerText = fest.desc;
 
       const catEl = document.getElementById('f-category');
       catEl.innerText = fest.category;
-      catEl.className = fest.category === '먹거리' ? 'badge badge-food' : 'badge badge-tour';
+      catEl.className = fest.category === '먹거리' ? 'badge badge-food'
+                        : fest.category === '관광' ? 'badge badge-tour'
+                        : 'badge badge-api';
 
       const healthBox = document.getElementById('health-box');
       if (fest.healthTip) {
@@ -542,6 +554,87 @@
     }
     renderMapMarkers('all');
     requestUserLocation(); // 페이지 진입 시 위치 권한 요청 (거부해도 나머지 기능은 정상 동작)
+
+    // ==========================================
+    // ⭐ 한국관광공사 TourAPI 연동 — 전국 최신 축제 자동 수집
+    // ==========================================
+    // 🚨 [공공데이터포털(data.go.kr)에서 발급받은 서비스키(인코딩 버전)를 여기에 넣으세요] 🚨
+    // 활용신청: "한국관광공사_국문 관광정보 서비스_GW" (TourAPI 4.0) 검색 후 신청
+    const TOUR_API_KEY = "E9jJJ2NPz1XIzsg6wQaz%2B8f2mBC1k5G9uBSnkCYX%2FMzXhUzsJubRZiYz1rmbtn8%2Fan8NTqy9F4jZyd5xFh%2FaQQ%3D%3D";
+
+    // TourAPI의 homepage 필드는 보통 <a href="...">사이트로 이동</a> 형태의 HTML 문자열로 옴 → 링크 주소만 추출
+    function extractHomepageUrl(htmlStr) {
+      if (!htmlStr) return "";
+      const match = /href=["']([^"']+)["']/.exec(htmlStr);
+      return match ? match[1] : "";
+    }
+
+    // YYYYMMDD → YYYY.MM.DD 형태로 변환
+    function formatApiDate(yyyymmdd) {
+      if (!yyyymmdd || yyyymmdd.length < 8) return "";
+      return `${yyyymmdd.slice(0, 4)}.${yyyymmdd.slice(4, 6)}.${yyyymmdd.slice(6, 8)}`;
+    }
+
+    async function fetchTourApiFestivals() {
+      if (!TOUR_API_KEY || TOUR_API_KEY.includes("여기에")) {
+        console.warn("TourAPI 서비스키가 설정되지 않아 공공데이터 축제를 불러오지 않습니다.");
+        return [];
+      }
+      try {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const eventStartDate = `${yyyy}${mm}${dd}`; // 오늘 이후(진행중 포함) 축제만 조회
+
+        // KorService2(TourAPI 4.0) 축제/공연/행사 정보 조회 (searchFestival2)
+        const url = `https://apis.data.go.kr/B551011/KorService2/searchFestival2`
+          + `?serviceKey=${TOUR_API_KEY}`
+          + `&numOfRows=100&pageNo=1`
+          + `&MobileOS=ETC&MobileApp=FestivalApp&_type=json`
+          + `&arrange=A&eventStartDate=${eventStartDate}`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`API 응답 오류: ${res.status}`);
+        const data = await res.json();
+        const items = data?.response?.body?.items?.item || [];
+
+        return items
+          .filter(item => item.mapx && item.mapy) // 좌표 없는 항목 제외
+          .map(item => {
+            const startMonth = Number(item.eventstartdate?.substring(4, 6)) || 1;
+            const endMonth = Number(item.eventenddate?.substring(4, 6)) || startMonth;
+            const months = [];
+            for (let m = startMonth; m <= endMonth; m++) months.push(m);
+
+            return {
+              name: item.title || "이름 미상 축제",
+              category: "공공데이터",
+              url: extractHomepageUrl(item.homepage),
+              lat: parseFloat(item.mapy), // TourAPI 기준: mapy = 위도
+              lng: parseFloat(item.mapx), // TourAPI 기준: mapx = 경도
+              loc: item.addr1 || "",
+              date: `${formatApiDate(item.eventstartdate)} ~ ${formatApiDate(item.eventenddate)}`,
+              months: months.length ? months : [startMonth],
+              desc: "한국관광공사 제공 축제 정보입니다. 자세한 내용은 홈페이지를 확인해주세요.",
+              healthTip: "",
+              image: item.firstimage || ""
+            };
+          });
+      } catch (e) {
+        console.error("TourAPI 축제 정보를 불러오지 못했습니다:", e);
+        return [];
+      }
+    }
+
+    async function loadTourApiFestivals() {
+      const apiFestivals = await fetchTourApiFestivals();
+      if (apiFestivals.length === 0) return;
+      festivals = festivals.concat(apiFestivals);
+      const activeBtn = document.querySelector('.month-btn.active');
+      renderMapMarkers(activeBtn ? activeBtn.getAttribute('data-month') : 'all');
+    }
+    loadTourApiFestivals();
 
 
     document.querySelectorAll('.month-btn').forEach(btn => {
