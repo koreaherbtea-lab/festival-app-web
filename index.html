@@ -35,8 +35,8 @@
     .month-btn:hover, .month-btn.active { background: #2f9e44; color: white; }
     
     #map-wrapper { display: flex; flex: 1; width: 100%; }
-    #map { flex: 2; height: 100%; }
-    #info-panel { flex: 1; padding: 20px; background-color: #f8f9fa; border-left: 2px solid #ddd; overflow-y: auto; }
+    #map { flex: 1; height: 100%; }
+    #info-panel { flex: 2; padding: 20px; background-color: #f8f9fa; border-left: 2px solid #ddd; overflow-y: auto; }
     
     .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
     .badge-food { background-color: #ff9f43; }
@@ -81,6 +81,23 @@
     .comment-meta { font-weight: bold; font-size: 12px; margin-bottom: 5px; color: #555; }
     .comment-input-box { display: flex; gap: 10px; margin-top: 20px; }
     .comment-input-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+
+    /* === 모바일 반응형 (768px 이하) === */
+    @media (max-width: 768px) {
+      /* 지도를 위, 축제 안내를 아래로 세로 배치 */
+      #map-wrapper { flex-direction: column; }
+      #map { flex: none; width: 100%; height: 45vh; }
+      #info-panel { flex: 1; width: 100%; box-sizing: border-box; border-left: none; border-top: 2px solid #ddd; }
+
+      /* 헤더 영역이 좁은 화면에서 줄바꿈되도록 */
+      header { padding: 12px 15px; }
+      header h2 { font-size: 17px; }
+
+      /* 월 버튼을 게시판 페이지 번호처럼 작고 촘촘하게 */
+      .month-btn { padding: 6px 10px; font-size: 12px; }
+      /* 기본 진입 시 숨겨질 월 버튼 (JS가 제어) */
+      .month-btn.mobile-hide { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -149,6 +166,7 @@
               <input type="text" id="f-review-input" placeholder="후기를 남겨보세요 (로그인 필요)" maxlength="500">
               <button id="btn-save-freview" class="btn btn-primary" style="padding: 8px 15px;">등록</button>
             </div>
+            <p style="font-size: 11px; color: #999; margin-top: 6px; margin-bottom: 0;">※ 광고·홍보성 도배, 욕설·비방 등 이 축제 안내 페이지에 적합하지 않은 게시물은 사전 통보 없이 삭제될 수 있습니다.</p>
           </div>
           
           <button id="like-btn" class="btn btn-like" style="display:none;">❤️ 이 축제 찜하기</button>
@@ -205,7 +223,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     // 🚨 [여기에 본인의 Firebase Config를 꼭 넣으세요] 🚨
     // ⚠️ 중요: 아래 config 값은 클라이언트에 공개되어도 되는 값이지만,
@@ -229,6 +247,10 @@
     let currentUser = null;
     let currentFestival = "";
     let currentPostId = null;
+
+    // 👑 관리자 이메일 목록 — 여기 등록된 계정은 다른 사람이 쓴 축제 후기도 삭제할 수 있습니다.
+    // 여러 명을 관리자로 두려면 콤마로 구분해서 추가하세요.
+    const ADMIN_EMAILS = ["koreaherbtea@gmail.com"];
 
     // 🔒 XSS 방지용 이스케이프 헬퍼
     // 게시글 제목/본문, 댓글, 후기 등 "사용자가 직접 입력한 값"을 화면에 그릴 때는
@@ -300,7 +322,7 @@
         const snapshot = await getDocs(q);
         
         let reviews = [];
-        snapshot.forEach(doc => reviews.push(doc.data()));
+        snapshot.forEach(docSnap => reviews.push({ id: docSnap.id, ...docSnap.data() }));
         
         // 시간순 정렬 (옛날 후기가 위로)
         reviews.sort((a, b) => {
@@ -319,10 +341,16 @@
           const div = document.createElement('div');
           div.className = 'f-review-item';
           const dateStr = r.createdAt ? r.createdAt.toDate().toLocaleDateString() : '방금 전';
+          const canDelete = currentUser && (currentUser.uid === r.authorId || ADMIN_EMAILS.includes(currentUser.email));
           div.innerHTML = `
-            <strong style="color:#555;">${escapeHtml(r.authorName)}</strong> 
-            <span style="color:#aaa; font-size:11px;">(${escapeHtml(dateStr)})</span>
-            <div style="margin-top:3px; color:#333;">${escapeHtml(r.text)}</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="flex:1;">
+                <strong style="color:#555;">${escapeHtml(r.authorName)}</strong> 
+                <span style="color:#aaa; font-size:11px;">(${escapeHtml(dateStr)})</span>
+                <div style="margin-top:3px; color:#333;">${escapeHtml(r.text)}</div>
+              </div>
+              ${canDelete ? `<button onclick="deleteFestivalReview('${r.id}')" style="background:none; border:none; color:#e03131; font-size:12px; cursor:pointer; white-space:nowrap; padding:2px 4px;">삭제</button>` : ''}
+            </div>
           `;
           container.appendChild(div);
         });
@@ -333,6 +361,18 @@
         container.innerHTML = "후기를 불러오지 못했습니다.";
       }
     }
+
+    // ⭐ 축제 후기 삭제 (작성자 본인 또는 관리자만 실제로 성공함 — 규칙에서 최종 검증)
+    async function deleteFestivalReview(reviewId) {
+      if (!confirm("이 후기를 삭제하시겠습니까?")) return;
+      try {
+        await deleteDoc(doc(db, "festival_reviews", reviewId));
+        loadFestivalReviews(currentFestival);
+      } catch (e) {
+        alert("삭제 실패: " + e.message);
+      }
+    }
+    window.deleteFestivalReview = deleteFestivalReview; // 카드 안 인라인 버튼에서 호출하기 위해 전역으로 노출
 
     // ⭐ 축제 후기 등록 이벤트
     document.getElementById('btn-save-freview').addEventListener('click', async () => {
@@ -416,6 +456,48 @@
         document.getElementById('festival-info').classList.add('hidden');
       });
     });
+
+    // === 모바일: 월 버튼을 게시판 페이지 번호처럼 표시 ===
+    // 접속 시에는 '전체보기' + 현재 월 기준 근처 월만 노출, '전체보기' 클릭 시 12개월 전부 펼침
+    const monthBarEl = document.getElementById('month-bar');
+    const allMonthBtn = document.querySelector('.month-btn[data-month="all"]');
+    const monthOnlyBtns = document.querySelectorAll('.month-btn[data-month]:not([data-month="all"])');
+
+    function isMobileView() {
+      return window.innerWidth <= 768;
+    }
+
+    function updateMonthBarForMobile() {
+      if (!isMobileView() || monthBarEl.classList.contains('expanded')) {
+        // PC 화면이거나, 모바일에서 이미 펼쳐진 상태면 전부 표시
+        monthOnlyBtns.forEach(b => b.classList.remove('mobile-hide'));
+        return;
+      }
+      // 오늘 날짜 기준으로 근처 월(페이지 번호처럼 앞뒤 2개월씩)만 노출
+      const currentMonth = new Date().getMonth() + 1;
+      let start = currentMonth - 2;
+      let end = currentMonth + 2;
+      if (start < 1) { end += (1 - start); start = 1; }
+      if (end > 12) { start -= (end - 12); end = 12; }
+      start = Math.max(1, start);
+
+      monthOnlyBtns.forEach(b => {
+        const m = Number(b.getAttribute('data-month'));
+        if (m >= start && m <= end) b.classList.remove('mobile-hide');
+        else b.classList.add('mobile-hide');
+      });
+    }
+
+    // '전체보기' 클릭 시(모바일에서만) 월 목록을 펼침
+    allMonthBtn.addEventListener('click', () => {
+      if (isMobileView()) {
+        monthBarEl.classList.add('expanded');
+        updateMonthBarForMobile();
+      }
+    });
+
+    window.addEventListener('resize', updateMonthBarForMobile);
+    updateMonthBarForMobile();
 
     document.getElementById('like-btn').addEventListener('click', async () => {
       if (!currentUser) return alert("로그인이 필요합니다.");
