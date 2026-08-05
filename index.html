@@ -310,7 +310,10 @@
         </div>
 
         <div id="board-read-sec" class="hidden">
-          <button id="btn-back-to-list" class="btn btn-secondary" style="margin-bottom: 15px;">⬅ 목록으로</button>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+            <button id="btn-back-to-list" class="btn btn-secondary">⬅ 목록으로</button>
+            <button id="btn-delete-post" class="hidden" style="background:none; border:1px solid #e03131; color:#e03131; font-size:13px; cursor:pointer; padding:6px 12px; border-radius:6px;">삭제</button>
+          </div>
           <h2 id="post-read-title">제목</h2>
           <div id="post-read-meta">정보</div>
           <div id="post-read-body">내용</div>
@@ -680,30 +683,62 @@
       box.classList.remove('hidden');
     }
 
+    // 특정 이동시간 구간(minMinutes 초과 ~ maxMinutes 이하) 안에서 '가장 잘 알려진'(큐레이션된) 축제 1곳을 선택
+    // 큐레이션된 축제가 그 구간에 없으면, 구간 내에서 가장 가까운 축제로 대체
+    function pickBestInRange(minMinutes, maxMinutes, excludeNames) {
+      const candidates = festivals.filter(f => {
+        if (excludeNames.includes(f.name) || f.name === currentFestival) return false;
+        const distKm = getDistanceKm(userLat, userLng, f.lat, f.lng);
+        const mins = (distKm / 60) * 60;
+        return mins > minMinutes && mins <= maxMinutes;
+      });
+      if (candidates.length === 0) return null;
+
+      const featured = candidates.filter(f => f.isFeatured);
+      const pool = featured.length > 0 ? featured : candidates;
+      pool.sort((a, b) => getDistanceKm(userLat, userLng, a.lat, a.lng) - getDistanceKm(userLat, userLng, b.lat, b.lng));
+      return pool[0];
+    }
+
+    function renderRecommendCard(fest, label) {
+      if (!fest) {
+        return `<p style="font-size:13px; color:#999; margin:0 0 14px 0;">${label} 안에는 추천할 만한 여행지가 없어요.</p>`;
+      }
+      const dist = getDistanceKm(userLat, userLng, fest.lat, fest.lng);
+      return `
+        <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed #eee;">
+          <p style="margin:0 0 4px 0; font-size:12px; color:#2f9e44; font-weight:bold;">🚗 ${label}</p>
+          <p style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:#333;">${escapeHtml(fest.name)}</p>
+          <p style="margin:0 0 4px 0; font-size:13px; color:#666;">📍 ${escapeHtml(fest.loc)} · 📅 ${escapeHtml(fest.date)}</p>
+          <p style="margin:0 0 10px 0; font-size:13px; color:#2f9e44;">${dist.toFixed(1)}km · ${formatTravelTime(dist)}</p>
+          <button class="btn btn-primary goto-recommend-btn" data-name="${escapeHtml(fest.name)}" style="width:100%;">이 축제 보러가기</button>
+        </div>
+      `;
+    }
+
     function updateNextRecommendation() {
       const box = document.getElementById('next-recommend');
       const content = document.getElementById('recommend-content');
       if (userLat == null) { box.classList.add('hidden'); return; }
 
-      let nearest = null, nearestDist = Infinity;
-      festivals.forEach(f => {
-        if (f.name === currentFestival) return; // 지금 보고 있는 축제는 추천에서 제외
-        const d = getDistanceKm(userLat, userLng, f.lat, f.lng);
-        if (d < nearestDist) { nearestDist = d; nearest = f; }
-      });
-      if (!nearest) { box.classList.add('hidden'); return; }
+      // 1시간 이내(0~60분) 중 가장 잘 알려진 곳 1곳, 2시간 이내(60~120분) 중 가장 잘 알려진 곳 1곳
+      const within1h = pickBestInRange(0, 60, []);
+      const within2h = pickBestInRange(60, 120, within1h ? [within1h.name] : []);
 
-      content.innerHTML = `
-        <p style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:#333;">${escapeHtml(nearest.name)}</p>
-        <p style="margin:0 0 4px 0; font-size:13px; color:#666;">📍 ${escapeHtml(nearest.loc)} · 📅 ${escapeHtml(nearest.date)}</p>
-        <p style="margin:0 0 10px 0; font-size:13px; color:#2f9e44; font-weight:bold;">🚗 현재 위치에서 ${nearestDist.toFixed(1)}km · ${formatTravelTime(nearestDist)}</p>
-        <button id="btn-goto-recommend" class="btn btn-primary" style="width:100%;">이 축제 보러가기</button>
-      `;
+      if (!within1h && !within2h) { box.classList.add('hidden'); return; }
+
+      content.innerHTML = renderRecommendCard(within1h, '1시간 이내') + renderRecommendCard(within2h, '2시간 이내');
       box.classList.remove('hidden');
-      document.getElementById('btn-goto-recommend').onclick = () => {
-        map.setView([nearest.lat, nearest.lng], 9);
-        selectFestival(nearest);
-      };
+
+      content.querySelectorAll('.goto-recommend-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fest = festivals.find(f => f.name === btn.getAttribute('data-name'));
+          if (fest) {
+            map.setView([fest.lat, fest.lng], 9);
+            selectFestival(fest);
+          }
+        });
+      });
     }
 
     // 지도 렌더링 및 축제 데이터
@@ -712,11 +747,11 @@
     const markersGroup = L.layerGroup().addTo(map);
 
     let festivals = [
-      { name: "화천 산천어축제", category: "먹거리", url: "https://www.narafestival.com/", lat: 38.106, lng: 127.708, loc: "강원도 화천군", date: "1월", months: [1], desc: "얼음낚시와 산천어 구이를 즐기는 겨울 축제.", healthTip: "산천어는 기력을 보충하고 위장을 튼튼하게 해줍니다." },
-      { name: "금산 인삼축제", category: "먹거리", url: "https://www.geumsan.go.kr/insam/", lat: 36.108, lng: 127.488, loc: "충청남도 금산군", date: "9월~10월", months: [9, 10], desc: "전국 최고의 인삼과 한방 약초를 직접 시식하고 체험하는 건강 축제.", healthTip: "인삼은 한의학에서 대보원기(大補元氣)라 하여 몸의 원기를 크게 보하고 둔해진 소화 기능을 살려줍니다." },
-      { name: "보성 다향대축제", category: "먹거리", url: "https://dahyang.boseong.go.kr/", lat: 34.771, lng: 127.079, loc: "전라남도 보성군", date: "5월", months: [5], desc: "녹차밭 풍경과 차 따기 체험 축제.", healthTip: "녹차는 머리를 맑게 하고 열을 내려주며 독소 배출에 탁월합니다." },
-      { name: "진해 군항제", category: "관광", url: "https://www.changwon.go.kr/depart/contents.do?mId=0301010100", lat: 35.149, lng: 128.660, loc: "경상남도 창원시", date: "3월~4월", months: [3, 4], desc: "국내 최대 규모의 화려한 봄 벚꽃 풍경을 감상하는 명품 관광 축제.", healthTip: "" },
-      { name: "보령 머드축제", category: "관광", url: "https://mudfestival.or.kr/", lat: 36.305, lng: 126.518, loc: "충청남도 보령시", date: "7월~8월", months: [7, 8], desc: "신나는 진흙 체험 및 해수욕 관광 축제.", healthTip: "" }
+      { name: "화천 산천어축제", category: "먹거리", url: "https://www.narafestival.com/", lat: 38.106, lng: 127.708, loc: "강원도 화천군", date: "1월", months: [1], desc: "얼음낚시와 산천어 구이를 즐기는 겨울 축제.", healthTip: "산천어는 기력을 보충하고 위장을 튼튼하게 해줍니다.", isFeatured: true },
+      { name: "금산 인삼축제", category: "먹거리", url: "https://www.geumsan.go.kr/insam/", lat: 36.108, lng: 127.488, loc: "충청남도 금산군", date: "9월~10월", months: [9, 10], desc: "전국 최고의 인삼과 한방 약초를 직접 시식하고 체험하는 건강 축제.", healthTip: "인삼은 한의학에서 대보원기(大補元氣)라 하여 몸의 원기를 크게 보하고 둔해진 소화 기능을 살려줍니다.", isFeatured: true },
+      { name: "보성 다향대축제", category: "먹거리", url: "https://dahyang.boseong.go.kr/", lat: 34.771, lng: 127.079, loc: "전라남도 보성군", date: "5월", months: [5], desc: "녹차밭 풍경과 차 따기 체험 축제.", healthTip: "녹차는 머리를 맑게 하고 열을 내려주며 독소 배출에 탁월합니다.", isFeatured: true },
+      { name: "진해 군항제", category: "관광", url: "https://www.changwon.go.kr/depart/contents.do?mId=0301010100", lat: 35.149, lng: 128.660, loc: "경상남도 창원시", date: "3월~4월", months: [3, 4], desc: "국내 최대 규모의 화려한 봄 벚꽃 풍경을 감상하는 명품 관광 축제.", healthTip: "", isFeatured: true },
+      { name: "보령 머드축제", category: "관광", url: "https://mudfestival.or.kr/", lat: 36.305, lng: 126.518, loc: "충청남도 보령시", date: "7월~8월", months: [7, 8], desc: "신나는 진흙 체험 및 해수욕 관광 축제.", healthTip: "", isFeatured: true }
     ];
 
     // 마커 클릭 및 '이 축제 보러가기' 버튼에서 공통으로 쓰는 축제 선택 로직
@@ -967,9 +1002,31 @@
       const dateStr = post.createdAt ? post.createdAt.toDate().toLocaleDateString() : '방금 전';
       document.getElementById('post-read-meta').innerText = `${post.authorName} | ${dateStr}`;
       document.getElementById('post-read-body').innerText = post.body;
+
+      // 작성자 본인 또는 관리자에게만 삭제 버튼 노출
+      const delBtn = document.getElementById('btn-delete-post');
+      const canDelete = currentUser && (currentUser.uid === post.authorId || ADMIN_EMAILS.includes(currentUser.email));
+      if (canDelete) {
+        delBtn.classList.remove('hidden');
+        delBtn.onclick = () => deletePost(id);
+      } else {
+        delBtn.classList.add('hidden');
+      }
+
       showBoardSection(secRead); loadComments(id);
     }
     document.getElementById('btn-back-to-list').addEventListener('click', loadPosts);
+
+    async function deletePost(id) {
+      if (!confirm("이 게시글을 삭제하시겠습니까? 댓글도 함께 삭제되지 않을 수 있습니다.")) return;
+      try {
+        await deleteDoc(doc(db, "posts", id));
+        alert("삭제되었습니다.");
+        loadPosts();
+      } catch (e) {
+        alert("삭제 실패: " + e.message);
+      }
+    }
 
     async function loadComments(postId) {
       const container = document.getElementById('comments-container');
