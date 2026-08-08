@@ -7,21 +7,49 @@
   
   <!-- 지도 디자인(Leaflet) 불러오기 -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
+
+  <!-- Stitch 디자인 참고: 타이포그래피 + 아이콘 폰트 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,300..600,0..1&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; flex-direction: column; background-color: #f8f9fa; }
-    header { background-color: #2f9e44; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    
+    /* ===== 디자인 토큰 (Stitch 디자인 참고) ===== */
+    :root {
+      --primary: #0058bc;
+      --primary-dark: #00408a;
+      --primary-soft: #e8f0fb;
+      --on-primary: #ffffff;
+      --surface: #f7f8fa;
+      --surface-card: #ffffff;
+      --text: #1b1b1d;
+      --text-muted: #6b7280;
+      --border-soft: rgba(0,0,0,0.07);
+      --radius-card: 16px;
+      --radius-pill: 999px;
+      --shadow-card: 0 4px 20px rgba(0,0,0,0.05);
+      --shadow-card-hover: 0 8px 30px rgba(0,0,0,0.08);
+      --font-heading: 'Hanken Grotesk', 'Malgun Gothic', sans-serif;
+      --font-body: 'Inter', 'Malgun Gothic', sans-serif;
+    }
+
+    body { font-family: var(--font-body), 'Malgun Gothic', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; flex-direction: column; background-color: var(--surface); color: var(--text); }
+    h1, h2, h3, h4 { font-family: var(--font-heading), 'Malgun Gothic', sans-serif; }
+    header { background-color: rgba(255,255,255,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--text); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-soft); box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    header h2 { font-family: var(--font-heading), 'Malgun Gothic', sans-serif; color: var(--primary); font-weight: 700; letter-spacing: -0.01em; }
+    header #user-name { color: var(--text); }
+
     /* 상단 네비게이션 탭 */
-    .nav-tabs { display: flex; gap: 10px; }
-    .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-    .nav-btn.active, .nav-btn:hover { background: white; color: #2f9e44; }
+    .nav-tabs { display: flex; gap: 6px; }
+    .nav-btn { background: #f0f1f3; border: none; color: var(--text-muted); padding: 8px 18px; border-radius: var(--radius-pill); cursor: pointer; font-weight: 600; font-family: var(--font-body), sans-serif; transition: all 0.2s; }
+    .nav-btn.active, .nav-btn:hover { background: var(--primary); color: var(--on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 
     /* 기본 버튼 & 유틸 */
-    .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    .btn-login { background-color: white; color: #2f9e44; }
-    .btn-primary { background-color: #2f9e44; color: white; }
-    .btn-secondary { background-color: #888; color: white; }
+    .btn { padding: 10px 18px; border: none; border-radius: var(--radius-pill); cursor: pointer; font-weight: 600; font-family: var(--font-body), sans-serif; transition: all 0.2s; }
+    .btn-login { background-color: var(--primary-soft); color: var(--primary); }
+    .btn-primary { background-color: var(--primary); color: var(--on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .btn-primary:hover { background-color: var(--primary-dark); }
+    .btn-secondary { background-color: #eceef1; color: var(--text-muted); }
     .hidden { display: none !important; }
 
     /* 뷰 컨테이너 (지도 vs 게시판) */
@@ -29,62 +57,73 @@
     #map-wrapper, .map-wrapper-box { min-height: 0; }
     
     /* === 지도 화면 CSS === */
-    #month-bar { background-color: #ffffff; padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 2px solid #eee; white-space: nowrap; }
+    #month-bar { background-color: var(--surface-card); padding: 12px 15px; display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
     #month-bar::-webkit-scrollbar { height: 6px; }
     #month-bar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-    .month-btn { padding: 8px 16px; border: 1px solid #2f9e44; background: white; color: #2f9e44; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; flex-shrink: 0; }
-    .month-btn:hover, .month-btn.active { background: #2f9e44; color: white; }
+    .month-btn { padding: 8px 16px; border: 1px solid var(--border-soft); background: #f0f1f3; color: var(--text-muted); border-radius: var(--radius-pill); cursor: pointer; font-weight: 600; font-family: var(--font-body), sans-serif; transition: all 0.2s; flex-shrink: 0; }
+    .month-btn:hover, .month-btn.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
     
-    #map-wrapper, .map-wrapper-box { display: flex; flex: 1; width: 100%; gap: 15px; padding: 15px; box-sizing: border-box; background-color: #f8f9fa; }
-    #map, .map-box { flex: 2; height: 100%; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
-    #info-panel, .info-panel-box { flex: 3; padding: 20px; background-color: white; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.12); overflow-y: auto; box-sizing: border-box; }
+    #map-wrapper, .map-wrapper-box { display: flex; flex: 1; width: 100%; gap: 15px; padding: 15px; box-sizing: border-box; background-color: var(--surface); }
+    #map, .map-box { flex: 2; height: 100%; border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-card); border: 1px solid var(--border-soft); }
+    #info-panel, .info-panel-box { flex: 3; padding: 22px; background-color: var(--surface-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: 1px solid var(--border-soft); overflow-y: auto; box-sizing: border-box; }
     
-    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
+    .badge { padding: 4px 12px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; color: white; display: inline-block; }
     .badge-food { background-color: #ff9f43; }
     .badge-tour { background-color: #54a0ff; }
     .badge-api { background-color: #8395a7; }
     .badge-cafe { background-color: #795548; }
     .badge-restaurant { background-color: #ff9f43; }
     
-    .festival-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
-    .health-card { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
-    .health-card h4 { margin: 0 0 6px 0; color: #166534; font-size: 14px; }
-    .health-card p { margin: 0; color: #15803d; font-size: 13px; line-height: 1.5; }
-    .festival-link { color: #2f9e44; text-decoration: none; font-size: 22px; font-weight: bold; }
+    .festival-card { background: var(--surface-card); padding: 22px; border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: 1px solid var(--border-soft); margin-top: 20px; }
+
+    /* 카드 상단 이미지 영역 (Stitch 스타일: 그라데이션 + 배지 + 찜하기) */
+    .card-media { position: relative; width: auto; height: 200px; margin: -22px -22px 16px -22px; border-radius: var(--radius-card) var(--radius-card) 0 0; overflow: hidden; background: linear-gradient(135deg, #cfd8e3, #eef1f5); }
+    .card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-media img.hidden { display: none; }
+    .card-media-gradient { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0) 55%); pointer-events: none; }
+    .card-media-badge { position: absolute !important; top: 12px; left: 12px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .card-media-heart { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.35); backdrop-filter: blur(6px); border: none; color: white; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.15s; }
+    .card-media-heart:hover { background: rgba(0,0,0,0.55); transform: scale(1.08); }
+    .card-media-heart.liked { background: var(--primary); }
+
+    .health-card { background-color: var(--primary-soft); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px; margin-top: 15px; margin-bottom: 15px; }
+    .health-card h4 { margin: 0 0 6px 0; color: var(--primary-dark); font-size: 14px; }
+    .health-card p { margin: 0; color: var(--primary-dark); font-size: 13px; line-height: 1.5; }
+    .festival-link { color: var(--primary); text-decoration: none; font-size: 22px; font-weight: 700; font-family: var(--font-heading), sans-serif; }
     .festival-link:hover { text-decoration: underline; }
     
     /* 축제 후기 영역 CSS */
-    .f-review-section { margin-top: 20px; border-top: 2px dashed #eee; padding-top: 15px; }
-    .f-review-list { max-height: 150px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; border-radius: 5px; padding: 10px; font-size: 13px; margin-bottom: 10px; }
+    .f-review-section { margin-top: 20px; border-top: 1px dashed var(--border-soft); padding-top: 15px; }
+    .f-review-list { max-height: 150px; overflow-y: auto; background: #fafafa; border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px; font-size: 13px; margin-bottom: 10px; }
     .f-review-item { border-bottom: 1px dashed #ddd; padding-bottom: 8px; margin-bottom: 8px; }
     .f-review-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .f-review-input-box { display: flex; gap: 5px; }
-    .f-review-input-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .f-review-input-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
 
     .btn-like { background-color: #4ecdc4; color: white; width: 100%; margin-top: 15px; }
 
     /* === 게시판 화면 CSS === */
     #board-wrapper, .board-wrapper-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; align-items: flex-start; }
-    .board-content { width: 100%; max-width: 800px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .board-content { width: 100%; max-width: 800px; background: var(--surface-card); padding: 24px; border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: 1px solid var(--border-soft); }
     
-    .post-item { border-bottom: 1px solid #eee; padding: 15px 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
-    .post-item:hover { background-color: #f8f9fa; }
-    .post-title { font-size: 16px; font-weight: bold; color: #333; margin: 0; }
-    .post-meta { font-size: 12px; color: #888; margin-top: 5px; }
+    .post-item { border-bottom: 1px solid var(--border-soft); padding: 15px 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; border-radius: 10px; }
+    .post-item:hover { background-color: var(--primary-soft); }
+    .post-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 0; }
+    .post-meta { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
     
     .form-group { margin-bottom: 15px; }
-    .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: inherit; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d8dbe0; border-radius: 10px; box-sizing: border-box; font-family: inherit; }
     .form-group textarea { height: 200px; resize: vertical; }
 
     #post-read-title { margin-top: 0; font-size: 24px; }
-    #post-read-meta { color: #888; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+    #post-read-meta { color: var(--text-muted); font-size: 13px; border-bottom: 1px solid var(--border-soft); padding-bottom: 15px; margin-bottom: 15px; }
     #post-read-body { font-size: 15px; line-height: 1.6; min-height: 150px; white-space: pre-wrap; }
     
-    .comment-section { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
-    .comment-item { background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; }
-    .comment-meta { font-weight: bold; font-size: 12px; margin-bottom: 5px; color: #555; }
+    .comment-section { margin-top: 40px; border-top: 1px solid var(--border-soft); padding-top: 20px; }
+    .comment-item { background: var(--surface); padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; }
+    .comment-meta { font-weight: 700; font-size: 12px; margin-bottom: 5px; color: var(--text-muted); }
     .comment-input-box { display: flex; gap: 10px; margin-top: 20px; }
-    .comment-input-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+    .comment-input-box input { flex: 1; padding: 10px; border: 1px solid #d8dbe0; border-radius: 10px; }
 
     /* === 모바일 반응형 (768px 이하) === */
     @media (max-width: 768px) {
@@ -153,9 +192,13 @@
         <h3 id="guide-text" style="margin: 0;">상단의 월별 버튼을 누르거나 지도 핀을 클릭해 축제 정보를 확인하세요.</h3>
         
         <div id="festival-info" class="festival-card hidden">
-          <img id="f-image" class="hidden" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:12px;" src="" alt="축제 이미지">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-            <span id="f-category" class="badge">카테고리</span>
+          <div id="f-media" class="card-media">
+            <img id="f-image" class="hidden" src="" alt="축제 이미지">
+            <div class="card-media-gradient"></div>
+            <span id="f-category" class="badge card-media-badge">카테고리</span>
+            <button id="like-btn" class="card-media-heart hidden" aria-label="찜하기" title="찜하기"><span id="like-icon">♡</span></button>
+          </div>
+          <div style="margin-bottom: 10px;">
             <a id="f-name" href="#" target="_blank" class="festival-link">축제 이름</a>
           </div>
           <p><strong>📍 장소:</strong> <span id="f-location">장소</span></p>
@@ -182,13 +225,11 @@
             </div>
             <p style="font-size: 11px; color: #999; margin-top: 6px; margin-bottom: 0;">※ 광고·홍보성 도배, 욕설·비방 등 이 축제 안내 페이지에 적합하지 않은 게시물은 사전 통보 없이 삭제될 수 있습니다.</p>
           </div>
-          
-          <button id="like-btn" class="btn btn-like" style="display:none;">❤️ 이 축제 찜하기</button>
         </div>
 
         <!-- ⭐ 다음 추천 여행지 카드 (현재 위치에서 가장 가까운 축제) ⭐ -->
-        <div id="next-recommend" class="festival-card hidden" style="border: 2px dashed #2f9e44;">
-          <h4 style="margin: 0 0 10px 0; color: #2f9e44;">🚀 다음 추천 여행지</h4>
+        <div id="next-recommend" class="festival-card hidden" style="border: 2px dashed var(--primary);">
+          <h4 style="margin: 0 0 10px 0; color: var(--primary);">🚀 다음 추천 여행지</h4>
           <div id="recommend-content"><!-- JS로 채워짐 --></div>
         </div>
       </div>
@@ -261,12 +302,13 @@
 
         <!-- 카페·식당 상세 정보 카드 -->
         <div id="cafe-info" class="festival-card hidden">
-          <img id="cafe-detail-image" class="hidden" style="width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:12px;" alt="장소 이미지">
+          <div id="cafe-media" class="card-media">
+            <img id="cafe-detail-image" class="hidden" src="" alt="장소 이미지">
+            <div class="card-media-gradient"></div>
+            <span id="cafe-detail-category" class="badge badge-cafe card-media-badge">카페</span>
+          </div>
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-            <div>
-              <span id="cafe-detail-category" class="badge badge-tour" style="margin-bottom:6px; display:inline-block;">카페</span>
-              <h3 id="cafe-detail-name" style="margin:4px 0 6px 0;">이름</h3>
-            </div>
+            <h3 id="cafe-detail-name" style="margin:4px 0 6px 0;">이름</h3>
             <button id="btn-delete-cafe" class="hidden" style="background:none; border:1px solid #e03131; color:#e03131; font-size:12px; cursor:pointer; padding:4px 8px; border-radius:6px; white-space:nowrap;">삭제</button>
           </div>
           <p><strong>📍 주소:</strong> <span id="cafe-detail-address"></span></p>
@@ -292,7 +334,7 @@
       <div class="board-content">
         
         <div id="board-list-sec">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2f9e44; padding-bottom: 10px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 10px;">
             <h2 style="margin: 0;">📝 자유 게시판</h2>
             <button id="btn-go-write" class="btn btn-primary">글쓰기</button>
           </div>
@@ -345,7 +387,7 @@
         </p>
 
         <div style="text-align: left; max-width: 560px; margin: 0 auto 25px auto; background: #f0fdf4; border-radius: 10px; padding: 18px 20px;">
-          <h3 style="margin: 0 0 12px 0; color: #2f9e44; font-size: 16px;">📖 이용 방법</h3>
+          <h3 style="margin: 0 0 12px 0; color: var(--primary); font-size: 16px;">📖 이용 방법</h3>
           <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 2; color: #333;">
             <li><strong>[축제]</strong> 탭에서 지도 위 핀을 클릭하거나, 상단 월별 버튼으로 원하는 시기의 축제를 찾아보세요.</li>
             <li>축제 카드를 열면 위치 허용 시 <strong>현재 위치에서 예상 이동 시간</strong>과, 카드 아래 <strong>가장 가까운 다음 추천 여행지</strong>를 함께 안내해드려요.</li>
@@ -381,7 +423,7 @@
         <h3 style="color: #e67700; border-bottom: 2px solid #ffe0a3; padding-bottom: 8px;">⏳ 승인 대기 회원</h3>
         <div id="pending-users-list" style="margin-bottom: 35px;">불러오는 중...</div>
 
-        <h3 style="color: #2f9e44; border-bottom: 2px solid #d3f9d8; padding-bottom: 8px;">✅ 가입 회원</h3>
+        <h3 style="color: var(--primary); border-bottom: 2px solid #d3f9d8; padding-bottom: 8px;">✅ 가입 회원</h3>
         <div id="approved-users-list">불러오는 중...</div>
       </div>
     </div>
@@ -454,7 +496,7 @@
         document.getElementById('user-name').innerText = user.displayName + "님";
         document.getElementById('login-btn').classList.add('hidden');
         document.getElementById('logout-btn').classList.remove('hidden');
-        document.getElementById('like-btn').style.display = 'block';
+        document.getElementById('like-btn').classList.remove('hidden');
 
         // 관리자 계정이면 '관리자' 탭 노출 (실제 데이터 접근 제한은 Firestore 규칙에서 처리)
         const adminTabBtn = document.getElementById('tab-admin');
@@ -469,7 +511,7 @@
         document.getElementById('user-name').innerText = "";
         document.getElementById('login-btn').classList.remove('hidden');
         document.getElementById('logout-btn').classList.add('hidden');
-        document.getElementById('like-btn').style.display = 'none';
+        document.getElementById('like-btn').classList.add('hidden');
         document.getElementById('tab-admin').classList.add('hidden');
       }
     });
@@ -707,10 +749,10 @@
       const dist = getDistanceKm(userLat, userLng, fest.lat, fest.lng);
       return `
         <div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed #eee;">
-          <p style="margin:0 0 4px 0; font-size:12px; color:#2f9e44; font-weight:bold;">🚗 ${label}</p>
+          <p style="margin:0 0 4px 0; font-size:12px; color:var(--primary); font-weight:bold;">🚗 ${label}</p>
           <p style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:#333;">${escapeHtml(fest.name)}</p>
           <p style="margin:0 0 4px 0; font-size:13px; color:#666;">📍 ${escapeHtml(fest.loc)} · 📅 ${escapeHtml(fest.date)}</p>
-          <p style="margin:0 0 10px 0; font-size:13px; color:#2f9e44;">${dist.toFixed(1)}km · ${formatTravelTime(dist)}</p>
+          <p style="margin:0 0 10px 0; font-size:13px; color:var(--primary);">${dist.toFixed(1)}km · ${formatTravelTime(dist)}</p>
           <button class="btn btn-primary goto-recommend-btn" data-name="${escapeHtml(fest.name)}" style="width:100%;">이 축제 보러가기</button>
         </div>
       `;
@@ -755,18 +797,28 @@
     ];
 
     // 마커 클릭 및 '이 축제 보러가기' 버튼에서 공통으로 쓰는 축제 선택 로직
+    // 이미지가 없는 카드에 표시할 카테고리별 대체 그라데이션 배경
+    function categoryFallbackGradient(category) {
+      const colorMap = { '먹거리': '#ff9f43', '관광': '#54a0ff', '카페': '#795548', '식당': '#ff9f43' };
+      const c = colorMap[category] || '#8395a7';
+      return `linear-gradient(135deg, ${c}cc, ${c}66)`;
+    }
+
     function selectFestival(fest) {
       document.getElementById('festival-info').classList.remove('hidden');
       const nameLink = document.getElementById('f-name');
       nameLink.innerText = fest.url ? fest.name + " 🔗" : fest.name;
       nameLink.href = fest.url || "#";
 
+      const mediaEl = document.getElementById('f-media');
       const imgEl = document.getElementById('f-image');
       if (fest.image) {
         imgEl.src = fest.image;
         imgEl.classList.remove('hidden');
+        mediaEl.style.background = '';
       } else {
         imgEl.classList.add('hidden');
+        mediaEl.style.background = categoryFallbackGradient(fest.category);
       }
 
       document.getElementById('f-location').innerText = fest.loc;
@@ -775,9 +827,15 @@
 
       const catEl = document.getElementById('f-category');
       catEl.innerText = fest.category;
-      catEl.className = fest.category === '먹거리' ? 'badge badge-food'
-                        : fest.category === '관광' ? 'badge badge-tour'
-                        : 'badge badge-api';
+      catEl.className = 'badge card-media-badge ' + (fest.category === '먹거리' ? 'badge-food'
+                        : fest.category === '관광' ? 'badge-tour'
+                        : 'badge-api');
+
+      // 축제가 바뀔 때마다 찜하기 하트 표시는 기본(비어있음) 상태로 초기화
+      const heartIcon = document.getElementById('like-icon');
+      const heartBtn = document.getElementById('like-btn');
+      if (heartIcon) heartIcon.innerText = '♡';
+      if (heartBtn) heartBtn.classList.remove('liked');
 
       const healthBox = document.getElementById('health-box');
       if (fest.healthTip) {
@@ -942,8 +1000,16 @@
 
     document.getElementById('like-btn').addEventListener('click', async () => {
       if (!currentUser) return alert("로그인이 필요합니다.");
-      await addDoc(collection(db, "favorites"), { userId: currentUser.uid, userName: currentUser.displayName, festivalName: currentFestival, timestamp: serverTimestamp() });
-      alert("찜하기 완료!");
+      const heartBtn = document.getElementById('like-btn');
+      const heartIcon = document.getElementById('like-icon');
+      try {
+        await addDoc(collection(db, "favorites"), { userId: currentUser.uid, userName: currentUser.displayName, festivalName: currentFestival, timestamp: serverTimestamp() });
+        // 채워진 하트로 즉시 시각 피드백 (alert 대신)
+        heartBtn.classList.add('liked');
+        heartIcon.innerText = '♥';
+      } catch (e) {
+        alert("찜하기 실패: " + e.message);
+      }
     });
 
     // 자유 게시판 로직 (기존과 동일)
@@ -1183,16 +1249,23 @@
       const category = cafe.category || 'cafe';
       const catEl = document.getElementById('cafe-detail-category');
       catEl.innerText = category === 'restaurant' ? '🍴 식당' : '☕ 카페';
-      catEl.className = category === 'restaurant' ? 'badge badge-restaurant' : 'badge badge-cafe';
+      catEl.className = 'badge card-media-badge ' + (category === 'restaurant' ? 'badge-restaurant' : 'badge-cafe');
 
       document.getElementById('cafe-detail-name').innerText = cafe.name;
       document.getElementById('cafe-detail-address').innerText = cafe.address;
       document.getElementById('cafe-detail-author').innerText = cafe.authorName || '익명';
       document.getElementById('cafe-detail-review').innerText = cafe.review;
 
+      const cafeMediaEl = document.getElementById('cafe-media');
       const imgEl = document.getElementById('cafe-detail-image');
-      if (cafe.image) { imgEl.src = cafe.image; imgEl.classList.remove('hidden'); }
-      else { imgEl.classList.add('hidden'); }
+      if (cafe.image) {
+        imgEl.src = cafe.image;
+        imgEl.classList.remove('hidden');
+        cafeMediaEl.style.background = '';
+      } else {
+        imgEl.classList.add('hidden');
+        cafeMediaEl.style.background = categoryFallbackGradient(category === 'restaurant' ? '식당' : '카페');
+      }
 
       // 등록자 본인 또는 관리자만 삭제 버튼 노출
       const delBtn = document.getElementById('btn-delete-cafe');
